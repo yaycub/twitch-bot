@@ -1,5 +1,6 @@
 require('dotenv').config();
 const tmi = require('tmi.js');
+const { getRandomQuote } = require('./api-services');
 
 
 const channelOpts = {
@@ -14,12 +15,7 @@ const channelOpts = {
 
 const client = new tmi.Client(channelOpts);
 
-client.on('message', onMessageHandler);
-client.on('connect', onConnectedHandler);
-
-client.connect();
-
-function onMessageHandler(target, context, msg, self) {
+const onMessageHandler = async(target, context, msg, self) => {
   if(self) { return; } // Ignore messages from the bot
 
   // Remove whitespace from chat message
@@ -30,10 +26,24 @@ function onMessageHandler(target, context, msg, self) {
     const num = rollDice();
     client.say(target, `You rolled a ${num}`);
     console.log(`* Executed ${commandName} command`);
+  } else if(commandName === '!quote'){
+    const quote = await getRandomQuote();
+
+    client.say(target, `"${quote.quote}" - ${quote.character}`);
+    console.log(`Excuted ${commandName} command`);
+  
   } else {
     console.log(`* Unknown command ${commandName}`);
   }
-}
+  
+};
+
+client.on('message', onMessageHandler);
+client.on('connect', onConnectedHandler);
+
+client.connect();
+
+
 
 function rollDice() {
   const sides = 6;
