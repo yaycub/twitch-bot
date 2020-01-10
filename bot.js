@@ -1,6 +1,8 @@
+/* eslint-disable no-console */
 require('dotenv').config();
 const tmi = require('tmi.js');
-const { getRandomQuote } = require('./api-services');
+const chance = require('chance').Chance();
+const { getFuturamaQuote, getDragQuote, getSimpsonQuote, getOpening } = require('./api-services');
 
 
 const channelOpts = {
@@ -15,19 +17,30 @@ const channelOpts = {
 
 const client = new tmi.Client(channelOpts);
 
-const onMessageHandler = async(target, context, msg, self) => {
-  if(self) { return; } // Ignore messages from the bot
+client.on('message', onMessageHandler);
+client.on('connect', onConnectedHandler);
 
-  // Remove whitespace from chat message
+client.connect();
+
+function rollDice() {
+  return Math.floor(Math.random() * 6) + 1;
+}
+
+function onConnectedHandler(addr, port) {
+  console.log(`* Connected to ${addr}:${port}`);
+}
+
+async function onMessageHandler(target, context, msg, self) {
+  if(self) { return; } 
+
   const commandName = msg.trim();
 
-  // If the command is known, let's execute it
   if(commandName === '!dice') {
     const num = rollDice();
     client.say(target, `You rolled a ${num}`);
     console.log(`* Executed ${commandName} command`);
   } else if(commandName === '!quote'){
-    const quote = await getRandomQuote();
+    const quote = await chance.pickone([getFuturamaQuote(), getSimpsonQuote(), getDragQuote(), getOpening()]);
 
     client.say(target, `"${quote.quote}" - ${quote.character}`);
     console.log(`Excuted ${commandName} command`);
@@ -35,22 +48,22 @@ const onMessageHandler = async(target, context, msg, self) => {
   } else {
     console.log(`* Unknown command ${commandName}`);
   }
-  
-};
-
-client.on('message', onMessageHandler);
-client.on('connect', onConnectedHandler);
-
-client.connect();
-
-
-
-function rollDice() {
-  const sides = 6;
-  return Math.floor(Math.random() * sides) + 1;
 }
 
-function onConnectedHandler(addr, port) {
-  // eslint-disable-next-line no-console
-  console.log(`* Connected to ${addr}:${port}`);
+async function quoteByMin() {
+  const quote = await chance.pickone([getFuturamaQuote(), getSimpsonQuote(), getDragQuote(), getOpening()]);
+  client.say(process.env.CHANNEL_NAME, `"${quote.quote}" - ${quote.character}`);
 }
+
+function spamChat() {
+  return new Promise(resolve => setTimeout(resolve, 500));
+}
+
+async function say(){
+  while(true){
+    await spamChat();
+    await quoteByMin();
+  }
+}
+
+// say();
